@@ -1,0 +1,156 @@
+
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>GeoSet</title>
+<style>
+body {
+  margin:0;
+  padding:0;
+}
+#map {
+  display:block;
+  margin:auto;
+  width:1000px;
+  height:600px;
+}
+.foreground {
+  fill: none;
+  stroke: #222;
+  stroke-width: 1px;
+  pointer-events: all;
+  cursor: -webkit-grab;
+  cursor: -moz-grab;
+}
+.foreground.zooming {
+  cursor: -webkit-grabbing;
+  cursor: -moz-grabbing;
+}
+.graticule {
+  fill: none;
+  stroke: #c0c0c0;
+  stroke-width: .5px;
+  stroke-dasharray: 2,2;
+}
+.land {
+  fill: #3D9970;
+  stroke: none;
+}
+.mesh {
+  stroke: #8ac1a9;
+  stroke-dasharray: 2px;
+  stroke-width: .5px;
+  fill: none;
+}
+
+#projection {
+  position:absolute;
+  top:0;
+  left:0;
+  padding:15px;
+  background:rgba(255,255,255,0.7);
+}
+pre {
+  margin:0;
+  color:#999;
+}
+pre span {
+  font-style:bold;
+  color:#000;
+}
+</style>
+
+<div id="map"></div>
+<div id="projection"><code><pre>
+d3.geo.orthographic()
+  .precision(.5)
+  .clipAngle(90)
+  .clipExtent([[-1, -1], [width + 1, height + 1]])
+  .translate([width / 2, height / 2])
+  .scale(<strong><span id="scale">245</span></strong>)
+  .rotate(<strong>[<span id="rotateX">0</span>, <span id="rotateY">0</span>]</strong>);</pre></code>
+</div>
+
+<script src="http://d3js.org/d3.v3.min.js"></script>
+<script src="http://d3js.org/topojson.v1.min.js"></script>
+<script src="http://www.jasondavies.com/maps/d3.geo.projection.js"></script>
+<script src="http://www.jasondavies.com/maps/d3.geo.zoom.js"></script>
+<script>
+
+var degrees = 180 / Math.PI,
+    width = 1000,
+    height = 600;
+
+var loader = d3.dispatch("world"), id = -1;
+
+d3.selectAll("#map")
+    .data([
+      orthographicProjection(width, height)
+          .scale(570)
+          .translate([width / 2, height * .56])
+          .rotate([100,-50])
+    ])
+  .append("svg")
+    .attr("width", width)
+    .attr("height", height)
+    .each(function(projection) {
+      var path = d3.geo.path().projection(projection),
+          svg = d3.select(this).call(drawMap, path, true);
+      svg.selectAll(".foreground")
+          .call(d3.geo.zoom().projection(projection)
+            .scaleExtent([projection.scale() * .7, projection.scale() * 10])
+            .on("zoom.redraw", function() {
+              // update the information
+              updateProjectionInfo(d3.event);
+              if (d3.event.sourceEvent.preventDefault) d3.event.sourceEvent.preventDefault();
+              svg.selectAll("path").attr("d", path);
+            }));
+      loader.on("world." + ++id, function() { svg.selectAll("path").attr("d", path); });
+    });
+
+d3.json("/data/world-110m.json", function(error, world) {
+  d3.selectAll("svg").insert("path", ".foreground")
+      .datum(topojson.feature(world, world.objects.land))
+      .attr("class", "land");
+  d3.selectAll("svg").insert("path", ".foreground")
+      .datum(topojson.mesh(world, world.objects.countries))
+      .attr("class", "mesh");
+  loader.world();
+});
+
+function updateProjectionInfo(e) {
+  console.log(e);
+  document.getElementById("scale").innerHTML = Math.round(e.sourceEvent.scale);
+  console.log(e.sourceEvent.translate);
+}
+
+function drawMap(svg, path, mousePoint) {
+  var projection = path.projection();
+
+  svg.append("path")
+      .datum(d3.geo.graticule())
+      .attr("class", "graticule")
+      .attr("d", path);
+
+  svg.append("path")
+      .datum({type: "Sphere"})
+      .attr("class", "foreground")
+      .attr("d", path)
+      .on("mousedown.grab", function() {
+        var path = d3.select(this).classed("zooming", true),
+            w = d3.select(window).on("mouseup.grab", function() {
+              path.classed("zooming", false);
+              w.on("mouseup.grab", null);
+            });
+      });
+}
+
+function orthographicProjection(width, height) {
+  return d3.geo.orthographic()
+      .precision(.5)
+      .clipAngle(90)
+      .clipExtent([[-1, -1], [width + 1, height + 1]])
+      .translate([width / 2, height / 2])
+      .scale(width / 2 - 10);
+}
+
+</script>
