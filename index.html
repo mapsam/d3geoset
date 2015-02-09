@@ -104,7 +104,7 @@ d3.selectAll("#map")
       loader.on("world." + ++id, function() { svg.selectAll("path").attr("d", path); });
     });
 
-d3.json("/data/world-110m.json", function(error, world) {
+d3.json("data/world-110m.json", function(error, world) {
   d3.selectAll("svg").insert("path", ".foreground")
       .datum(topojson.feature(world, world.objects.land))
       .attr("class", "land");
