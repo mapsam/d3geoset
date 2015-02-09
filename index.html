@@ -37,7 +37,7 @@ body {
 }
 .mesh {
   stroke: #8ac1a9;
-  stroke-dasharray: 2px;
+  stroke-dasharray: 3px;
   stroke-width: .5px;
   fill: none;
 }
@@ -62,12 +62,9 @@ pre span {
 <div id="map"></div>
 <div id="projection"><code><pre>
 d3.geo.orthographic()
-  .precision(.5)
-  .clipAngle(90)
-  .clipExtent([[-1, -1], [width + 1, height + 1]])
   .translate([width / 2, height / 2])
   .scale(<strong><span id="scale">245</span></strong>)
-  .rotate(<strong>[<span id="rotateX">0</span>, <span id="rotateY">0</span>]</strong>);</pre></code>
+  .rotate(<strong>[<span id="rotateX">0</span>, <span id="rotateY">0</span>, <span id="rotateZ">0</span>]</strong>);</pre></code>
 </div>
 
 <script src="http://d3js.org/d3.v3.min.js"></script>
@@ -85,9 +82,9 @@ var loader = d3.dispatch("world"), id = -1;
 d3.selectAll("#map")
     .data([
       orthographicProjection(width, height)
-          .scale(570)
+          .scale(245)
+          .rotate([0, 0, 0])
           .translate([width / 2, height * .56])
-          .rotate([100,-50])
     ])
   .append("svg")
     .attr("width", width)
@@ -97,10 +94,10 @@ d3.selectAll("#map")
           svg = d3.select(this).call(drawMap, path, true);
       svg.selectAll(".foreground")
           .call(d3.geo.zoom().projection(projection)
-            .scaleExtent([projection.scale() * .7, projection.scale() * 10])
+            .scaleExtent([projection.scale() * .2, projection.scale() * 100])
             .on("zoom.redraw", function() {
               // update the information
-              updateProjectionInfo(d3.event);
+              updateProjectionInfo(projection);
               if (d3.event.sourceEvent.preventDefault) d3.event.sourceEvent.preventDefault();
               svg.selectAll("path").attr("d", path);
             }));
@@ -117,10 +114,12 @@ d3.json("/data/world-110m.json", function(error, world) {
   loader.world();
 });
 
-function updateProjectionInfo(e) {
-  console.log(e);
-  document.getElementById("scale").innerHTML = Math.round(e.sourceEvent.scale);
-  console.log(e.sourceEvent.translate);
+function updateProjectionInfo(p) {
+  var rotate = p.rotate();
+  document.getElementById("scale").innerHTML = Math.round(p.scale());
+  document.getElementById("rotateX").innerHTML = Math.round(rotate[0]);
+  document.getElementById("rotateY").innerHTML = Math.round(rotate[1]);
+  document.getElementById("rotateZ").innerHTML = Math.round(rotate[2]);
 }
 
 function drawMap(svg, path, mousePoint) {
